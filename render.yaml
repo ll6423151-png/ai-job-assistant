@@ -29,6 +29,18 @@ services:
         value: tester@local.invalid
       - key: BOOTSTRAP_TEST_PASSWORD
         sync: false
+      - key: BOOTSTRAP_TEST2_USERNAME
+        value: tester2
+      - key: BOOTSTRAP_TEST2_EMAIL
+        value: tester2@local.invalid
+      - key: BOOTSTRAP_TEST2_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_TEST3_USERNAME
+        value: tester3
+      - key: BOOTSTRAP_TEST3_EMAIL
+        value: tester3@local.invalid
+      - key: BOOTSTRAP_TEST3_PASSWORD
+        sync: false
       - key: BACKEND_CORS_ORIGINS
         value: https://careerpilot-web-33387.onrender.com
       - key: PUBLIC_BASE_URL

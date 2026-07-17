@@ -37,6 +37,7 @@ Neon Free 无时间限制且不要求信用卡：https://neon.com/pricing
    - `DATABASE_URL`：Neon PostgreSQL 连接串。
    - `BOOTSTRAP_ADMIN_PASSWORD`：至少 12 位、包含字母和数字的测试管理员密码。
    - `BOOTSTRAP_TEST_PASSWORD`：可选的普通测试账号密码；默认用户名为 `tester`，默认邮箱为 `tester@local.invalid`。该账号不授予管理员权限，不应存放真实个人资料。
+   - `BOOTSTRAP_TEST2_PASSWORD`、`BOOTSTRAP_TEST3_PASSWORD`：可选的第二、第三个普通测试账号密码；默认用户名分别为 `tester2`、`tester3`，数据彼此隔离。
 5. 等待两个服务状态变为 Live，打开：
    - `https://careerpilot-api-33387.onrender.com/api/health`
    - `https://careerpilot-web-33387.onrender.com`
