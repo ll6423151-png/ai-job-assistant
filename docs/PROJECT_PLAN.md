@@ -947,3 +947,11 @@ OpenAPI 由 FastAPI 自动生成，主要接口如下：
 - 失败及原因：使用本机 `.env.online` 管理员密码请求 Render 登录返回 401，说明云端管理员密码与本机配置不同，未擅自重置。真机处于 MIUI Dozing/锁屏状态，截图为黑屏；没有绕过设备锁屏。
 - 后续任务：用户使用 Render Blueprint 中设置的测试管理员密码登录公网 Web；解锁真机后确认欢迎页和登录页。确认无误后可运行 `scripts/publish-github-release.ps1` 私下发布固定地址 APK。
 - 是否需要人工操作：需要用户输入云端测试管理员密码并解锁手机；智联登录、验证码和最终投递继续保持人工确认。
+#### 2026-07-18：Render 普通测试账号
+
+- 本次完成内容：为免费 Render 环境新增可选普通账号引导配置 `BOOTSTRAP_TEST_USERNAME`、`BOOTSTRAP_TEST_EMAIL`、`BOOTSTRAP_TEST_PASSWORD`；启动时通过现有 `init_user.py` 创建或更新普通用户，不授予管理员或历史数据所有者权限。Render 已配置 `tester` 测试账号 Secret，密码可通过后续 Secret 轮换同步更新。
+- 验证结果：认证专项测试 `6 passed`；`render.yaml` 解析通过；Render 后端部署为 Live，日志显示 `user-created: id=2 username=tester`。公网 Web 同源 API 登录成功，`is_admin=false`、职位 0、简历 0、会话 Cookie 正常，证明与管理员数据隔离。
+- 未完成内容：QQ 邮箱自助注册和找回密码在 Render 免费环境仍受 SMTP 端口限制；当前只提供一个共享测试账号，不适合保存真实个人资料。
+- 失败及原因：后端全量测试的 4 个既有智联 fake bridge 用例仍受同步返回值被 `await` 的问题影响，与本次认证和启动配置无关；本节点未修改真实投递逻辑。
+- 后续任务：测试者使用 `tester` 登录 APK；如需多人长期保存独立数据，应迁移到支持邮件 HTTP API 的注册方案或为每位用户单独预置账号，并在分发前轮换测试密码。
+- 是否需要人工操作：需要把测试账号密码只发给可信测试者；不要在该共享账号中保存真实简历、手机号或其他敏感资料。
