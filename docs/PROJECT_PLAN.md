@@ -898,3 +898,11 @@ OpenAPI 由 FastAPI 自动生成，主要接口如下：
 - 失败及原因：免费部署的代码源和数据库 Secret 属于外部账户资源，当前无法凭空创建远程 Git 仓库或猜测 Neon 连接串；Render 控制台没有现成项目可继续部署。
 - 后续任务：人工在 GitHub 创建空仓库并上传项目；在 Render New Blueprint 选择该仓库并导入 `render.yaml`；把 Neon 连接串和测试管理员密码填入后端 Secret；服务 Live 后验证 `/api/health`、登录和数据库迁移，再用最终 Web URL 重建 APK。
 - 是否需要人工操作：需要。必须由用户完成 GitHub 仓库创建/上传和 Render 的 `DATABASE_URL` Secret 填写；数据库连接串、密码和授权码不得发送到聊天。
+#### 2026-07-17：GitHub 仓库创建准备
+
+- 本次完成内容：在现有项目目录初始化本地 Git `main` 分支，添加并验证忽略规则，创建提交 `cc6d908`（`Prepare free test deployment`）；`.env.online`、数据库文件、Android keystore 等敏感/本地产物均被 Git 忽略。
+- 验证结果：`git check-ignore` 确认 `.env.online`、`backend/dev.db`、`android/keystore/careerpilot-release.jks` 不会进入提交；本地工作树无未提交修改。
+- 未完成内容：GitHub 远程仓库尚未创建，代码尚未 push；GitHub 新建页面在当前 Edge 网络中返回 `ERR_TIMED_OUT`；没有使用 API 绕过登录或猜测仓库名。
+- 失败及原因：当前网络到 GitHub 新建仓库页面超时；本机没有 `gh.exe`，只有缓存 Git 可执行文件，无法用 CLI 自动创建远程仓库。
+- 后续任务：网络恢复后在 GitHub 新建私有仓库，仓库名建议 `ai-job-assistant`；把远程地址添加为 `origin` 后推送 `main`；随后在 Render 导入 Blueprint 并填写 Neon Secret。
+- 是否需要人工操作：需要。用户只需在 GitHub 创建一个私有空仓库并把仓库地址发给我，或恢复当前网络后让我继续；不要发送 Neon 连接串、SMTP 授权码或任何密码。
