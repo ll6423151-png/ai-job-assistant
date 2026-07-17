@@ -1,5 +1,5 @@
 from app.models.application_record import ApplicationRecord
-from app.models.auth import AuthSession, EmailVerificationCode, User
+from app.models.auth import AuthSession, EmailVerificationCode, LoginAttempt, User
 from app.models.application_automation import AutomatedApplicationTask
 from app.models.blacklist_company import BlacklistCompany
 from app.models.greeting_message import GreetingMessage
@@ -20,6 +20,7 @@ __all__ = [
     "GreetingMessage",
     "Job",
     "JobSearchExclusion",
+    "LoginAttempt",
     "InterviewReport",
     "InterviewSession",
     "InterviewTurn",

@@ -5,12 +5,15 @@ from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import Cookie, Depends, HTTPException, Request, status
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db, tenant_context
-from app.models.auth import AuthSession, EmailVerificationCode, User
+from app.models.auth import AuthSession, EmailVerificationCode, LoginAttempt, User
 password_hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
+LOGIN_ATTEMPT_WINDOW = timedelta(minutes=15)
+LOGIN_IDENTIFIER_LIMIT = 5
+LOGIN_IP_LIMIT = 20
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -61,6 +64,77 @@ async def consume_email_code(db: AsyncSession, email: str, purpose: str, code: s
 async def find_user_by_identifier(db: AsyncSession, identifier: str) -> User | None:
     normalized = identifier.strip().lower()
     return await db.scalar(select(User).where(or_(func.lower(User.email) == normalized, func.lower(User.username) == normalized)))
+
+
+def login_identifier_digest(identifier: str) -> str:
+    return hashlib.sha256(identifier.strip().lower().encode("utf-8")).hexdigest()
+
+
+def request_ip_address(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if settings.environment == "production" and forwarded:
+        # Render preserves the originating client as the first forwarded address.
+        return forwarded.split(",")[0].strip()[:80]
+    return (request.client.host if request.client else "")[:80]
+
+
+async def enforce_password_login_limit(db: AsyncSession, identifier: str, ip_address: str) -> tuple[int, int]:
+    now = utcnow()
+    cutoff = now - LOGIN_ATTEMPT_WINDOW
+    identifier_hash = login_identifier_digest(identifier)
+    await db.execute(delete(LoginAttempt).where(LoginAttempt.created_at < cutoff))
+    identifier_count = await db.scalar(
+        select(func.count(LoginAttempt.id)).where(
+            LoginAttempt.identifier_hash == identifier_hash,
+            LoginAttempt.created_at >= cutoff,
+        )
+    ) or 0
+    ip_count = await db.scalar(
+        select(func.count(LoginAttempt.id)).where(
+            LoginAttempt.ip_address == ip_address,
+            LoginAttempt.created_at >= cutoff,
+        )
+    ) or 0
+    await db.commit()
+    if identifier_count >= LOGIN_IDENTIFIER_LIMIT or ip_count >= LOGIN_IP_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="登录尝试过于频繁，请 15 分钟后再试",
+            headers={"Retry-After": str(int(LOGIN_ATTEMPT_WINDOW.total_seconds()))},
+        )
+    return identifier_count, ip_count
+
+
+async def record_password_login_failure(
+    db: AsyncSession,
+    identifier: str,
+    ip_address: str,
+    identifier_count: int,
+    ip_count: int,
+) -> None:
+    db.add(
+        LoginAttempt(
+            identifier_hash=login_identifier_digest(identifier),
+            ip_address=ip_address,
+            created_at=utcnow(),
+        )
+    )
+    await db.commit()
+    if identifier_count + 1 >= LOGIN_IDENTIFIER_LIMIT or ip_count + 1 >= LOGIN_IP_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="登录尝试过于频繁，请 15 分钟后再试",
+            headers={"Retry-After": str(int(LOGIN_ATTEMPT_WINDOW.total_seconds()))},
+        )
+
+
+async def clear_password_login_failures(db: AsyncSession, identifier: str) -> None:
+    await db.execute(
+        delete(LoginAttempt).where(
+            LoginAttempt.identifier_hash == login_identifier_digest(identifier)
+        )
+    )
+    await db.commit()
 
 async def create_session(db: AsyncSession, user: User, request: Request, remember_me: bool) -> tuple[str, AuthSession]:
     now = utcnow()

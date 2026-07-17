@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import update
@@ -20,7 +21,12 @@ async def upload_resume(file: UploadFile=File(...), title: str=Form(default=''),
     if not content:
         raise HTTPException(status_code=422, detail='上传文件为空')
     try:
-        extracted = parse_resume(filename, content)
+        extracted = await asyncio.wait_for(
+            asyncio.to_thread(parse_resume, filename, content),
+            timeout=15,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(status_code=422, detail='简历解析超时，请检查文件内容后重试') from exc
     except ResumeParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     resume = Resume(title=(title.strip() or Path(filename).stem)[:120], target_role=target_role.strip()[:120], content=extracted, notes=f'由上传文件 {filename} 自动解析', status='draft', is_primary=is_primary)

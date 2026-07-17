@@ -49,3 +49,12 @@ class EmailVerificationCode(Base):
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
     requested_ip: Mapped[str] = mapped_column(String(80), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class LoginAttempt(Base):
+    __tablename__ = "auth_login_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    identifier_hash: Mapped[str] = mapped_column(String(64), index=True)
+    ip_address: Mapped[str] = mapped_column(String(80), default="", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

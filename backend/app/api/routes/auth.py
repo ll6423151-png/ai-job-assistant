@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.auth import AuthSession, EmailVerificationCode, User
 from app.schemas.auth import AuthStatus, CodeLoginRequest, EmailCodeRequest, EmailCodeSent, MessageResponse, PasswordLoginRequest, RegisterRequest, ResetPasswordRequest, UserRead
-from app.services.auth import consume_email_code, code_digest, create_session, find_user_by_identifier, get_current_user, hash_password, issue_email_code, token_digest, utcnow, verify_password
+from app.services.auth import clear_password_login_failures, consume_email_code, code_digest, create_session, enforce_password_login_limit, find_user_by_identifier, get_current_user, hash_password, issue_email_code, record_password_login_failure, request_ip_address, token_digest, utcnow, verify_password
 from app.services.email_delivery import EmailDeliveryUnavailable, send_verification_email
 router = APIRouter()
 
@@ -55,9 +55,19 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
 
 @router.post('/auth/login', response_model=AuthStatus)
 async def login(payload: PasswordLoginRequest, request: Request, response: Response, db: AsyncSession=Depends(get_db)) -> AuthStatus:
+    ip_address = request_ip_address(request)
+    identifier_count, ip_count = await enforce_password_login_limit(db, payload.identifier, ip_address)
     user = await find_user_by_identifier(db, payload.identifier)
     if user is None or not verify_password(user.password_hash, payload.password) or (not user.is_active):
+        await record_password_login_failure(
+            db,
+            payload.identifier,
+            ip_address,
+            identifier_count,
+            ip_count,
+        )
         raise HTTPException(status_code=401, detail='账号或密码错误')
+    await clear_password_login_failures(db, payload.identifier)
     token, session = await create_session(db, user, request, payload.remember_me)
     set_session_cookie(response, token, payload.remember_me)
     return auth_status(user, session.expires_at)

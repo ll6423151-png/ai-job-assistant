@@ -119,6 +119,31 @@ def test_invalid_password_is_rejected():
         close_client(client, engine)
 
 
+def test_password_login_is_rate_limited_after_five_failures():
+    client, SessionLocal, engine = build_client()
+    try:
+        with SessionLocal() as db:
+            db.add(User(username="limited", email="limited@local.invalid", password_hash=hash_password("valid123"), is_active=True))
+            db.commit()
+
+        statuses = [
+            client.post(
+                "/api/auth/login",
+                json={"identifier": "limited", "password": "wrong", "remember_me": False},
+            ).status_code
+            for _ in range(5)
+        ]
+        assert statuses == [401, 401, 401, 401, 429]
+        blocked = client.post(
+            "/api/auth/login",
+            json={"identifier": "limited", "password": "valid123", "remember_me": False},
+        )
+        assert blocked.status_code == 429
+        assert blocked.headers["retry-after"] == "900"
+    finally:
+        close_client(client, engine)
+
+
 def test_job_favorites_are_isolated_per_user():
     client, SessionLocal, engine = build_client()
     try:

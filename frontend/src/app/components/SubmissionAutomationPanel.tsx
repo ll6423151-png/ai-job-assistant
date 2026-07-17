@@ -96,6 +96,13 @@ export function SubmissionAutomationPanel({ apiBase }: { apiBase: string }) {
     setSalaryFloor(resolveSalaryFloor(profileData));
     setBlacklist(blacklistData);
     const loginEntries = await Promise.all(platformData.map(async (platform) => {
+      if (!platform.browser_bridge_available) {
+        return [platform.key, {
+          status: "bridge_unavailable" as const,
+          message: "当前运行环境未连接本机浏览器桥接，智联搜索和投递不可用",
+          evidence: [],
+        }] as const;
+      }
       try {
         return [platform.key, await fetchLoginState(platform.key)] as const;
       } catch (error) {
@@ -366,7 +373,7 @@ export function SubmissionAutomationPanel({ apiBase }: { apiBase: string }) {
       <aside><h3 className="text-sm font-semibold">平台连接</h3><div className="mt-3 divide-y divide-slate-200 border-y border-slate-200">
         {platforms.map((platform) => { const login = loginStates[platform.key]; return <div key={platform.key} className={`automation-platform ${selectedPlatform === platform.key ? "automation-platform-active" : ""}`}>
           <button type="button" onClick={() => setSelectedPlatform(platform.key)}><strong>{platform.name}</strong><span>{platform.description}</span></button>
-          <div className="mt-3 flex flex-wrap gap-2"><button type="button" className="button-secondary compact-button icon-text-button" disabled={working} onClick={() => void openLogin(platform.key)}><LogIn size={14} />打开登录</button><button type="button" className="button-secondary compact-button icon-text-button" disabled={working} onClick={() => void checkLogin(platform.key)}><RefreshCw size={14} />检查状态</button></div>
+          <div className="mt-3 flex flex-wrap gap-2"><button type="button" className="button-secondary compact-button icon-text-button" disabled={working} onClick={() => void openLogin(platform.key)}><LogIn size={14} />打开登录</button><button type="button" className="button-secondary compact-button icon-text-button" disabled={working || !platform.browser_bridge_available} onClick={() => void checkLogin(platform.key)}><RefreshCw size={14} />检查状态</button></div>
           <small className={`automation-login automation-login-${login?.status ?? "unknown"}`}>{login?.message ?? (platform.browser_bridge_available ? "等待登录检查" : "浏览器桥接未连接")}</small>
         </div>; })}
       </div></aside>
@@ -377,7 +384,7 @@ export function SubmissionAutomationPanel({ apiBase }: { apiBase: string }) {
               <h3 className="text-base font-semibold">自动查找匹配岗位</h3>
               <p className="mt-1 text-sm text-muted">按用户中心搜索智联官网、读取必要 JD，并用可投递主简历生成逐条确认清单。</p>
             </div>
-            <button type="button" className="button-primary icon-text-button" disabled={working} onClick={() => void startAutoApplyPlan()}><PlayCircle size={16} />搜索并生成清单</button>
+            <button type="button" className="button-primary icon-text-button" disabled={working || !selectedPlatformInfo?.browser_bridge_available} onClick={() => void startAutoApplyPlan()}><PlayCircle size={16} />搜索并生成清单</button>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
             <label className="field-label"><span>已审核沟通内容</span><select value={greetingId} onChange={(event) => { const value = event.target.value; setGreetingId(value); const selected = greetings.find((item) => item.id === Number(value)); if (selected) setGreetingContent(selected.content); }}><option value="">自定义内容</option>{approvedGreetings.map((greeting) => <option key={greeting.id} value={greeting.id}>已定稿 #{greeting.id}</option>)}</select></label>

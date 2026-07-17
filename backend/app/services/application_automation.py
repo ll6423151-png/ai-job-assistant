@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from datetime import datetime, timezone
@@ -192,7 +193,7 @@ async def submit_task(db: AsyncSession, task: AutomatedApplicationTask, adapter:
         first_click = _click_matching_control(bridge, task.browser_target_id, adapter.apply_labels)
         if not first_click.get('clicked'):
             raise BrowserBridgeError('未找到可点击的投递入口，页面可能已变化')
-        time.sleep(1.2)
+        await asyncio.sleep(1.2)
         second_click: dict[str, object] = {'clicked': False}
         resume_dialog = _inspect_resume_selection_dialog(bridge, task.browser_target_id)
         resume_selection: dict[str, object] = {'dialog_visible': bool(resume_dialog.get('visible')), 'selected': False, 'mode': 'platform_default'}
@@ -205,18 +206,23 @@ async def submit_task(db: AsyncSession, task: AutomatedApplicationTask, adapter:
             second_click = _click_resume_dialog_delivery(bridge, task.browser_target_id)
             if not second_click.get('clicked'):
                 raise BrowserBridgeError('智联简历弹窗未找到可用的立即申请按钮')
-            time.sleep(1.2)
+            await asyncio.sleep(1.2)
         elif adapter.requires_second_confirmation:
             second_click = _click_matching_control(bridge, task.browser_target_id, adapter.confirmation_labels, modal_only=True)
             if second_click.get('clicked'):
-                time.sleep(1.2)
+                await asyncio.sleep(1.2)
         page = inspect_page(bridge, task.browser_target_id, adapter)
         body = str(page.get('body_text', ''))
         success_evidence = [marker for marker in adapter.success_markers if marker in body]
         verified = bool(success_evidence)
         if verified:
             try:
-                communication = await send_post_apply_greeting(bridge, task.browser_target_id, task.greeting_snapshot)
+                communication = await asyncio.to_thread(
+                    send_post_apply_greeting,
+                    bridge,
+                    task.browser_target_id,
+                    task.greeting_snapshot,
+                )
             except BrowserBridgeError as exc:
                 communication = {'requested': bool(task.greeting_snapshot.strip()), 'status': 'manual_required', 'sent': False, 'reason': f'投递已成功，但沟通入口读取失败：{exc}'}
         else:
