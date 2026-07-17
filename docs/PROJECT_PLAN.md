@@ -938,3 +938,12 @@ OpenAPI 由 FastAPI 自动生成，主要接口如下：
 - 失败及原因：`f733f0d` 已越过依赖安装，但仓库没有 `frontend/public`，Docker runner 阶段复制该目录时退出状态 1。
 - 后续任务：推送修复并确认前端服务 Deployed；验证公网 Web、API 与管理员登录；随后用 `https://careerpilot-web-33387.onrender.com` 重建并验证 APK。
 - 是否需要人工操作：当前不需要；不修改 Render Secret，不执行智联搜索或真实投递。
+#### 2026-07-17：Render 免费环境上线与固定地址 APK 重建
+
+- 本次完成内容：提交并推送 `880b87d`，Render 前端和后端均完成自动部署并进入 Live；使用固定 Web 地址重新构建 Debug APK、Release APK 和 Release AAB，将 Release APK 覆盖安装到已授权真机并启动。
+- 验证结果：公网欢迎页正常渲染；`https://careerpilot-api-33387.onrender.com/api/health` 与 Web 同源 `/api/health` 均返回 `status=ok`、`environment=production`。后端部署日志确认使用 PostgreSQL Alembic 迁移、更新管理员记录并启动 Uvicorn。Android `testDebugUnitTest`、`lintDebug`、debug/release/AAB 构建均通过，Release APK 通过 v2 签名校验；反编译 `BuildConfig.APP_BASE_URL` 为 `https://careerpilot-web-33387.onrender.com`。真机 `2311DRK48C` 覆盖安装成功，应用进程已启动且 AndroidRuntime 无崩溃。
+- 产物：`dist/android/CareerPilot-AI-release.apk`（SHA-256 `E067F8FF08BA08B530391F65BDB84FDD65C7C62A90EE489EEE34427A948C6869`）、`dist/android/CareerPilot-AI-release.aab`（SHA-256 `D4337C9B49B96C58F5744D86D49724C036EC22F4F63E40CF44A7B721785D02B5`）、`dist/android/CareerPilot-AI-debug.apk`（SHA-256 `3DCC0D3744F34BA1E4C568AADD45E4422144DF15725D1D322F3A8AEF187F5E86`）。
+- 未完成内容：未完成公网管理员登录后的业务页验收；未完成真机解锁后的欢迎页、登录、上传和录音人工回归；未发布 GitHub Release。
+- 失败及原因：使用本机 `.env.online` 管理员密码请求 Render 登录返回 401，说明云端管理员密码与本机配置不同，未擅自重置。真机处于 MIUI Dozing/锁屏状态，截图为黑屏；没有绕过设备锁屏。
+- 后续任务：用户使用 Render Blueprint 中设置的测试管理员密码登录公网 Web；解锁真机后确认欢迎页和登录页。确认无误后可运行 `scripts/publish-github-release.ps1` 私下发布固定地址 APK。
+- 是否需要人工操作：需要用户输入云端测试管理员密码并解锁手机；智联登录、验证码和最终投递继续保持人工确认。
