@@ -906,3 +906,35 @@ OpenAPI 由 FastAPI 自动生成，主要接口如下：
 - 失败及原因：当前网络到 GitHub 新建仓库页面超时；本机没有 `gh.exe`，只有缓存 Git 可执行文件，无法用 CLI 自动创建远程仓库。
 - 后续任务：网络恢复后在 GitHub 新建私有仓库，仓库名建议 `ai-job-assistant`；把远程地址添加为 `origin` 后推送 `main`；随后在 Render 导入 Blueprint 并填写 Neon Secret。
 - 是否需要人工操作：需要。用户只需在 GitHub 创建一个私有空仓库并把仓库地址发给我，或恢复当前网络后让我继续；不要发送 Neon 连接串、SMTP 授权码或任何密码。
+#### 2026-07-17：Render 首次部署失败修复
+
+- 本次完成内容：创建 `careerpilot-free-test` Blueprint，Render 已识别并创建后端与前端两个 Web Service；分析前端失败日志，确认是 pnpm 10 阻止 `sharp` 构建脚本；将 `frontend/pnpm-workspace.yaml` 的无效占位配置改为 `onlyBuiltDependencies: [sharp]`，提交并推送 `09ed293`。
+- 验证结果：Render 日志明确显示失败点为 `ERR_PNPM_IGNORED_BUILDS`，不是业务代码、Neon 连接串或管理员密码；修复已推送到 GitHub `main`，Blueprint 将自动同步新提交。
+- 未完成内容：Render 尚未完成修复后的新部署；前端/后端公网健康检查和数据库迁移尚未验证；APK 尚未替换为 Render 公网地址。
+- 失败及原因：首次前端 Docker 构建因 `sharp` 安装脚本被 pnpm 阻止而退出码 1。
+- 后续任务：等待 Render 自动部署 `09ed293`；确认后端 Live、前端 Live，再检查 `/api/health`、登录和 Alembic；如后端失败再读取对应日志。
+- 是否需要人工操作：当前不需要。Neon Secret 和管理员密码已提交给 Render Blueprint；若 Render 再要求权限或 Secret，需要用户在控制台确认。
+#### 2026-07-17：Render 前端 sharp 构建二次修复
+
+- 本次完成内容：Render 第二次构建日志确认工作区配置未被 pnpm 读取；在 `frontend/package.json` 增加 pnpm 专用 `onlyBuiltDependencies: [sharp]` 配置，提交并推送 `e246176`。
+- 验证结果：前端失败仍精确发生在 `pnpm install --frozen-lockfile` 的 `ERR_PNPM_IGNORED_BUILDS sharp@0.34.5`，后端服务已 Deployed；第二次修复已推送，等待 Render 自动部署。
+- 未完成内容：前端尚未成功构建；公网 Web 仍未完成可用性验证；APK 尚未用公网地址重建。
+- 失败及原因：pnpm 版本在 Docker 中未识别工作区级允许构建配置，继续阻止 sharp 安装脚本。
+- 后续任务：等待 `e246176` 自动部署；若仍失败，将改用 Docker 安装参数显式允许构建脚本，避免依赖 pnpm 配置解析。
+- 是否需要人工操作：当前不需要。
+#### 2026-07-17：Render 前端构建脚本回退方案
+
+- 本次完成内容：由于 pnpm 10 在 Render 中持续阻止 `sharp` 构建脚本，前端 Render Dockerfile 改为 `pnpm install --frozen-lockfile --ignore-scripts`，跳过可选原生安装脚本；提交并推送 `f733f0d`。
+- 验证结果：Render 后端服务已部署；前端三个版本均失败在依赖安装阶段，未进入 Next.js 编译，错误均为 `ERR_PNPM_IGNORED_BUILDS sharp@0.34.5`。
+- 未完成内容：等待 `f733f0d` 新部署；公网前端、数据库迁移和登录尚未验收。
+- 失败及原因：Render pnpm 构建策略与项目工作区配置不兼容，允许列表没有生效。
+- 后续任务：确认前端成功后访问 `https://careerpilot-web-33387.onrender.com`，再调用后端健康接口并检查 Alembic 状态；如构建通过，重建免费测试 APK。
+- 是否需要人工操作：当前不需要。
+#### 2026-07-17：Render 前端 public 目录修复
+
+- 本次完成内容：检查 `f733f0d` 的完整 Render 构建日志，确认 `pnpm install --ignore-scripts` 已解除 sharp 阻塞且 Next.js 生产编译完成；新增 `frontend/public/.gitkeep`，确保 Docker 最终镜像阶段的 `COPY --from=builder /app/public ./public` 有稳定来源目录。
+- 验证结果：Render 日志显示 8 个静态页面生成完成，原失败点精确为 `/app/public: not found`；本地前端 18 项 Node 行为测试通过，TypeScript `tsc --noEmit` 通过。公网后端 `/api/health` 返回 production/ok。
+- 未完成内容：本修复尚待提交推送并等待 Render 自动部署；公网前端、登录链路和 APK 公网地址重建仍待验收。
+- 失败及原因：`f733f0d` 已越过依赖安装，但仓库没有 `frontend/public`，Docker runner 阶段复制该目录时退出状态 1。
+- 后续任务：推送修复并确认前端服务 Deployed；验证公网 Web、API 与管理员登录；随后用 `https://careerpilot-web-33387.onrender.com` 重建并验证 APK。
+- 是否需要人工操作：当前不需要；不修改 Render Secret，不执行智联搜索或真实投递。
