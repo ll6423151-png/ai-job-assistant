@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: careerpilot-api-33387
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: AI_PROVIDER
+        value: local
+      - key: LOCAL_TRANSCRIPTION_MODEL
+        value: base
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        value: https://careerpilot-web-33387.onrender.com
+      - key: PUBLIC_BASE_URL
+        value: https://careerpilot-web-33387.onrender.com
+      - key: APPLICATION_AUTOMATION_DAILY_LIMIT
+        value: "5"
+      - key: APPLICATION_AUTOMATION_COOLDOWN_SECONDS
+        value: "60"
+
+  - type: web
+    name: careerpilot-web-33387
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile.render
+    dockerContext: ./frontend
+    envVars:
+      - key: INTERNAL_API_BASE_URL
+        value: https://careerpilot-api-33387.onrender.com

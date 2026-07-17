@@ -1,0 +1,73 @@
+plugins {
+    id "com.android.application"
+}
+
+import java.util.Properties
+
+def configuredBaseUrl = providers.gradleProperty("CAREERPILOT_BASE_URL")
+        .orElse(System.getenv("CAREERPILOT_BASE_URL") ?: "https://app.careerpilot.invalid")
+        .get()
+        .trim()
+        .replaceAll('/+$', '')
+def escapedBaseUrl = configuredBaseUrl.replace("\\", "\\\\").replace('"', '\\"')
+def keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+android {
+    namespace "com.careerpilot.ai"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.careerpilot.ai"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+        buildConfigField "String", "APP_BASE_URL", "\"${escapedBaseUrl}\""
+        manifestPlaceholders = [usesCleartextTraffic: "false"]
+    }
+
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                storeFile rootProject.file("keystore/${keystoreProperties["storeFile"]}")
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+}
