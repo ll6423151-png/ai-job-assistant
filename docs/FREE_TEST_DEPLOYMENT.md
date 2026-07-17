@@ -36,6 +36,7 @@ Neon Free 无时间限制且不要求信用卡：https://neon.com/pricing
 4. 创建过程中填写两个 Secret：
    - `DATABASE_URL`：Neon PostgreSQL 连接串。
    - `BOOTSTRAP_ADMIN_PASSWORD`：至少 12 位、包含字母和数字的测试管理员密码。
+   - `BOOTSTRAP_TEST_PASSWORD`：可选的普通测试账号密码；默认用户名为 `tester`，默认邮箱为 `tester@local.invalid`。该账号不授予管理员权限，不应存放真实个人资料。
 5. 等待两个服务状态变为 Live，打开：
    - `https://careerpilot-api-33387.onrender.com/api/health`
    - `https://careerpilot-web-33387.onrender.com`
@@ -70,7 +71,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\publish-github
 
 - Render 服务闲置 15 分钟后休眠，第一次打开通常需要等待约一分钟。
 - Render 免费服务本地文件会在重启或重新部署后丢失，所以只能把业务数据放在 Neon。
-- Render 免费服务禁止访问 SMTP 25/465/587，因此 QQ 邮箱验证码、邮箱注册和找回密码不可用。测试者先使用预置管理员账号；不要把正式个人密码设为测试密码。
+- Render 免费服务禁止访问 SMTP 25/465/587，因此 QQ 邮箱验证码、邮箱注册和找回密码不可用。测试者优先使用预置普通测试账号；不要把正式个人密码设为测试密码。未设置 `BOOTSTRAP_TEST_PASSWORD` 时才回退使用管理员账号。
 - 免费服务不是正式生产环境，Render 可能重启或暂停服务。
 - 智联自动搜索/投递依赖本机 Windows Edge，不会迁移到 Render；测试者仍可使用简历、岗位管理、匹配、沟通、记录和基础面试等不依赖浏览器桥接的功能。
 - 本地 Whisper 可能因免费实例内存、冷启动和模型下载而失败；实时语音不作为本方案验收项。
