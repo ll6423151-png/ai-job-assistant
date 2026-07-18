@@ -29,6 +29,22 @@ BREVO_SENDER_NAME=CareerPilot AI
 
 配置后必须分别从注册、验证码登录和找回密码页面向真实 QQ 邮箱发送一次验证码，确认收件箱、垃圾邮件目录、五分钟有效期和单次消费均正常。
 
+### Brevo 不可用时的零费用本机中继
+
+当 Brevo 无法登录时，可以让 Render 通过当前 Cloudflare HTTPS Quick Tunnel 调用本机邮件中继，再由本机使用 QQ SMTP 发信。该方案不把 QQ SMTP 授权码上传到 Render，但要求 Windows 电脑、本机后端和 Tunnel 持续在线。
+
+1. 运行 `scripts/ensure-online-secrets.ps1` 生成仅保存在 `.env.online` 的 `EMAIL_RELAY_TOKEN`。
+2. 使用 `scripts/start-online.ps1 -SkipBuild` 启动本机后端、前端和两个隔离的 Quick Tunnel；邮件中继地址记录在 `runtime/email-relay-public-url.txt`。
+3. 在 Render 后端配置以下 Secret：
+
+```env
+EMAIL_DELIVERY_PROVIDER=relay
+EMAIL_RELAY_URL=https://当前Quick-Tunnel地址/api/internal/email-relay
+EMAIL_RELAY_TOKEN=与本机 .env.online 相同的随机密钥
+```
+
+中继只接受六位验证码、三种认证用途和有效 QQ 邮箱，使用至少 32 位随机 Bearer Token 认证；错误密钥返回 401，本机未配置密钥时接口隐藏为 404。Quick Tunnel 重启后地址会变化，必须同步更新 Render 的 `EMAIL_RELAY_URL`。
+
 ## QQ SMTP 配置（本地回退）
 
 普通注册用户只输入自己的 QQ 邮箱作为验证码接收地址，不需要提供 QQ 密码或 SMTP 授权码。所有验证码由系统配置的一个 QQ 发信邮箱统一发送。

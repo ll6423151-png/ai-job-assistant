@@ -32,6 +32,7 @@ foreach ($line in [System.IO.File]::ReadAllLines($ConfigPath)) {
 $required = @{
     AUTH_SECRET_KEY = New-SecureValue 48
     BOOTSTRAP_ADMIN_PASSWORD = New-SecureValue 24 "Cp!"
+    EMAIL_RELAY_TOKEN = New-SecureValue 48 "relay_"
 }
 
 $changed = @()
@@ -40,6 +41,7 @@ foreach ($key in $required.Keys) {
     $needsValue = -not $current
     if ($key -eq "AUTH_SECRET_KEY") { $needsValue = $current.Length -lt 32 }
     if ($key -eq "BOOTSTRAP_ADMIN_PASSWORD") { $needsValue = -not $current -or $current -eq "admin123" }
+    if ($key -eq "EMAIL_RELAY_TOKEN") { $needsValue = $current.Length -lt 32 }
     if (-not $needsValue) { continue }
 
     $replacement = "$key=$($required[$key])"

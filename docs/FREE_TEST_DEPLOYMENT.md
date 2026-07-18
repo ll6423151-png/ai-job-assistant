@@ -73,6 +73,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\publish-github
 - Render 服务闲置 15 分钟后休眠，第一次打开通常需要等待约一分钟。
 - Render 免费服务本地文件会在重启或重新部署后丢失，所以只能把业务数据放在 Neon。
 - Render 免费服务禁止访问 SMTP 25/465/587；配置 `BREVO_API_KEY` 和已验证的 `BREVO_SENDER_EMAIL` 后，系统可通过 HTTPS API 发送 QQ 邮箱验证码，恢复邮箱注册、验证码登录和找回密码。未配置前测试者优先使用预置普通测试账号；不要把正式个人密码设为测试密码。
+- Brevo 无法使用时，可把 `EMAIL_DELIVERY_PROVIDER` 设为 `relay`，让 Render 通过 HTTPS Quick Tunnel 调用本机 QQ SMTP 中继；该模式零服务费，但电脑关机、休眠、断网或 Tunnel 重启后邮件会停止，Tunnel 地址变化时还需更新 `EMAIL_RELAY_URL`。
 - 免费服务不是正式生产环境，Render 可能重启或暂停服务。
 - 智联自动搜索/投递依赖本机 Windows Edge，不会迁移到 Render；测试者仍可使用简历、岗位管理、匹配、沟通、记录和基础面试等不依赖浏览器桥接的功能。
 - 本地 Whisper 可能因免费实例内存、冷启动和模型下载而失败；实时语音不作为本方案验收项。

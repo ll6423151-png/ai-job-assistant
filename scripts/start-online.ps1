@@ -99,6 +99,7 @@ $backendEnvironment = @{
     BOOTSTRAP_ADMIN_PASSWORD = $settings["BOOTSTRAP_ADMIN_PASSWORD"]
     SMTP_USERNAME = $settings["SMTP_USERNAME"]
     SMTP_AUTHORIZATION_CODE = $settings["SMTP_AUTHORIZATION_CODE"]
+    EMAIL_RELAY_TOKEN = $settings["EMAIL_RELAY_TOKEN"]
 }
 $backend = Start-WithEnvironment -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-Command", "& '$python' -m uvicorn app.main:app --host 127.0.0.1 --port 8000") -Environment $backendEnvironment -WorkingDirectory (Join-Path $root "backend") -StandardOutput (Join-Path $runtimeDir "backend.log") -StandardError (Join-Path $runtimeDir "backend-error.log")
 $frontend = Start-WithEnvironment -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-Command", "& '$node' node_modules\next\dist\bin\next start --hostname 127.0.0.1 --port 3000") -Environment @{ INTERNAL_API_BASE_URL = "http://127.0.0.1:8000" } -WorkingDirectory (Join-Path $root "frontend") -StandardOutput (Join-Path $runtimeDir "frontend.log") -StandardError (Join-Path $runtimeDir "frontend-error.log")
@@ -111,11 +112,15 @@ if ($settings["OUTBOUND_HTTPS_PROXY"]) {
     $tunnelEnvironment.HTTPS_PROXY = $settings["OUTBOUND_HTTPS_PROXY"]
 }
 $tunnel = Start-WithEnvironment -FilePath $cloudflared -ArgumentList @("tunnel", "--url", "http://127.0.0.1:3000", "--no-autoupdate") -Environment $tunnelEnvironment -WorkingDirectory $root -StandardOutput $tunnelLog -StandardError $tunnelError
+$relayTunnelLog = Join-Path $runtimeDir "email-relay-cloudflared.log"
+$relayTunnelError = Join-Path $runtimeDir "email-relay-cloudflared-error.log"
+$relayTunnel = Start-WithEnvironment -FilePath $cloudflared -ArgumentList @("tunnel", "--url", "http://127.0.0.1:8000", "--no-autoupdate") -Environment $tunnelEnvironment -WorkingDirectory $root -StandardOutput $relayTunnelLog -StandardError $relayTunnelError
 
 [System.IO.File]::WriteAllText((Join-Path $runtimeDir "online-pids.json"), (@{
     backend = $backend.Id
     frontend = $frontend.Id
     tunnel = $tunnel.Id
+    relay_tunnel = $relayTunnel.Id
 } | ConvertTo-Json))
 
 $publicUrl = $null
@@ -136,4 +141,14 @@ for ($attempt = 0; $attempt -lt 60; $attempt++) {
 
 if (-not $publicUrl) { throw "Tunnel started but no public URL was found. Check runtime logs." }
 [System.IO.File]::WriteAllText((Join-Path $runtimeDir "public-url.txt"), $publicUrl)
+$relayPublicUrl = $null
+for ($attempt = 0; $attempt -lt 60; $attempt++) {
+    Start-Sleep -Seconds 1
+    $content = (Read-SharedText $relayTunnelLog) + (Read-SharedText $relayTunnelError)
+    $match = [regex]::Match($content, "https://[a-z0-9-]+\.trycloudflare\.com")
+    if ($match.Success) { $relayPublicUrl = $match.Value; break }
+}
+if (-not $relayPublicUrl) { throw "Email relay tunnel started but no public URL was found." }
+[System.IO.File]::WriteAllText((Join-Path $runtimeDir "email-relay-public-url.txt"), $relayPublicUrl)
 Write-Output $publicUrl
+Write-Output "Email relay tunnel is ready."

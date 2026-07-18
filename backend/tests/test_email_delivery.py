@@ -74,3 +74,79 @@ def test_auto_provider_keeps_smtp_fallback(monkeypatch):
 
     assert sent["username"] == "sender@qq.com"
     assert sent["recipient"] == "12345678@qq.com"
+
+
+def test_relay_provider_sends_only_code_payload_over_https(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_post(url, *, headers, json, timeout):
+        captured.update(url=url, headers=headers, json=json, timeout=timeout)
+        return httpx.Response(204, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(email_delivery.settings, "email_delivery_provider", "relay")
+    monkeypatch.setattr(email_delivery.settings, "email_relay_url", "https://relay.example.com/api/internal/email-relay")
+    monkeypatch.setattr(email_delivery.settings, "email_relay_token", "r" * 48)
+    monkeypatch.setattr(email_delivery.httpx, "post", fake_post)
+
+    send_verification_email("12345678@qq.com", "654321", "login")
+
+    assert captured["url"] == "https://relay.example.com/api/internal/email-relay"
+    assert captured["headers"] == {"authorization": f"Bearer {'r' * 48}"}
+    assert captured["json"] == {
+        "recipient": "12345678@qq.com",
+        "code": "654321",
+        "purpose": "login",
+    }
+    assert captured["timeout"] == 15
+
+
+def test_relay_provider_requires_https_and_long_secret(monkeypatch):
+    monkeypatch.setattr(email_delivery.settings, "email_delivery_provider", "relay")
+    monkeypatch.setattr(email_delivery.settings, "email_relay_url", "http://relay.example.com/api/internal/email-relay")
+    monkeypatch.setattr(email_delivery.settings, "email_relay_token", "short")
+
+    with pytest.raises(EmailDeliveryUnavailable, match="邮件中继尚未安全配置"):
+        send_verification_email("12345678@qq.com", "654321", "login")
+
+
+def test_internal_relay_rejects_wrong_token(client, monkeypatch):
+    from app.api.routes import internal_email_relay
+
+    monkeypatch.setattr(internal_email_relay.settings, "email_relay_token", "r" * 48)
+
+    response = client.post(
+        "/api/internal/email-relay",
+        headers={"authorization": "Bearer wrong"},
+        json={"recipient": "12345678@qq.com", "code": "654321", "purpose": "register"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_internal_relay_sends_qq_verification_email(client, monkeypatch):
+    from app.api.routes import internal_email_relay
+
+    sent: dict[str, str] = {}
+    monkeypatch.setattr(internal_email_relay.settings, "email_relay_token", "r" * 48)
+    monkeypatch.setattr(
+        internal_email_relay,
+        "send_verification_email_smtp",
+        lambda recipient, code, purpose: sent.update(
+            recipient=recipient,
+            code=code,
+            purpose=purpose,
+        ),
+    )
+
+    response = client.post(
+        "/api/internal/email-relay",
+        headers={"authorization": f"Bearer {'r' * 48}"},
+        json={"recipient": "12345678@qq.com", "code": "654321", "purpose": "reset_password"},
+    )
+
+    assert response.status_code == 204
+    assert sent == {
+        "recipient": "12345678@qq.com",
+        "code": "654321",
+        "purpose": "reset_password",
+    }

@@ -47,6 +47,17 @@ class EmailCodeSent(BaseModel):
     retry_after_seconds: int = 60
 
 
+class InternalEmailRelayRequest(BaseModel):
+    recipient: str
+    code: str = Field(min_length=6, max_length=6, pattern="^[0-9]{6}$")
+    purpose: str = Field(pattern="^(register|login|reset_password)$")
+
+    @field_validator("recipient")
+    @classmethod
+    def validate_recipient(cls, value: str) -> str:
+        return normalize_qq_email(value)
+
+
 class RegisterRequest(BaseModel):
     email: str
     password: str

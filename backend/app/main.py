@@ -12,6 +12,7 @@ from app.api.routes import (
     health,
     interview_audio,
     interviews,
+    internal_email_relay,
     jobs,
     matches,
     modules,
@@ -66,6 +67,7 @@ async def add_security_headers(request: Request, call_next) -> Response:
 
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/api", tags=["authentication"])
+app.include_router(internal_email_relay.router, prefix="/api", tags=["internal"])
 protected = [Depends(get_current_user)]
 app.include_router(modules.router, prefix="/api", tags=["modules"], dependencies=protected)
 app.include_router(user_profile.router, prefix="/api", tags=["user-center"], dependencies=protected)

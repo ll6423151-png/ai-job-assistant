@@ -69,9 +69,34 @@ def _send_with_smtp(recipient: str, subject: str, content: str) -> None:
             smtp.send_message(message)
 
 
+def _send_with_relay(recipient: str, code: str, purpose: str) -> None:
+    relay_url = settings.email_relay_url.strip()
+    relay_token = settings.email_relay_token.strip()
+    if not relay_url.startswith("https://") or len(relay_token) < 32:
+        raise EmailDeliveryUnavailable("HTTPS 邮件中继尚未安全配置")
+    try:
+        response = httpx.post(
+            relay_url,
+            headers={"authorization": f"Bearer {relay_token}"},
+            json={"recipient": recipient, "code": code, "purpose": purpose},
+            timeout=15,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise EmailDeliveryUnavailable("本机 QQ 邮件中继暂时不可用") from exc
+
+
+def send_verification_email_smtp(recipient: str, code: str, purpose: str) -> None:
+    subject, content = _verification_content(code, purpose)
+    _send_with_smtp(recipient, subject, content)
+
+
 def send_verification_email(recipient: str, code: str, purpose: str) -> None:
     subject, content = _verification_content(code, purpose)
     provider = settings.email_delivery_provider.strip().lower()
+    if provider == "relay":
+        _send_with_relay(recipient, code, purpose)
+        return
     if provider == "brevo" or (
         provider == "auto" and settings.brevo_api_key and settings.brevo_sender_email
     ):

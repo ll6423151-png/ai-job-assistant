@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_sender_email: str = ""
     brevo_sender_name: str = "CareerPilot AI"
+    email_relay_url: str = ""
+    email_relay_token: str = ""
     smtp_host: str = "smtp.qq.com"
     smtp_port: int = 465
     smtp_username: str = ""

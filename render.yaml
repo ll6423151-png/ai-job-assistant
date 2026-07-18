@@ -57,6 +57,10 @@ services:
         sync: false
       - key: BREVO_SENDER_NAME
         value: CareerPilot AI
+      - key: EMAIL_RELAY_URL
+        sync: false
+      - key: EMAIL_RELAY_TOKEN
+        sync: false
 
   - type: web
     name: careerpilot-web-33387

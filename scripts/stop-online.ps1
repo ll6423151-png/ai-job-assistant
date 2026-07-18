@@ -2,7 +2,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $pidPath = Join-Path $root "runtime\online-pids.json"
 if (-not (Test-Path -LiteralPath $pidPath)) { return }
 $processes = ConvertFrom-Json ([System.IO.File]::ReadAllText($pidPath))
-foreach ($processId in @($processes.backend, $processes.frontend, $processes.tunnel)) {
+foreach ($processId in @($processes.backend, $processes.frontend, $processes.tunnel, $processes.relay_tunnel)) {
     if ($processId) { Stop-Process -Id $processId -ErrorAction SilentlyContinue }
 }
 foreach ($port in @(3000, 8000)) {
