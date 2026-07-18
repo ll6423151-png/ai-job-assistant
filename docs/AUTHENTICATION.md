@@ -10,7 +10,26 @@
 - 简历、岗位、用户资料、公司黑名单、岗位屏蔽词、匹配、优化、沟通、投递、自动化任务、面试和分析统计均按 `user_id` 隔离。
 - 旧 `dev.db` 数据迁移给本机管理员 `admin`；本地首次测试密码为 `admin123`，密码在数据库内只保存 Argon2id 哈希。
 
-## QQ SMTP 配置
+## Render HTTPS 邮件配置（推荐）
+
+Render 免费服务不能连接 SMTP 25/465/587，但可以通过 HTTPS 443 调用事务邮件 API。生产环境推荐使用 Brevo；普通用户仍然只填写自己的 QQ 邮箱，不需要提供 QQ 密码、SMTP 授权码或 Brevo 密钥。
+
+1. 在 Brevo 创建账号并验证一个发件地址或自有域名。
+2. 在 Brevo 创建 API Key。
+3. 在 Render 后端服务的 Environment 中配置以下 Secret；API Key 不得提交到仓库或发送到聊天：
+
+```env
+EMAIL_DELIVERY_PROVIDER=brevo
+BREVO_API_KEY=Brevo 控制台生成的 API Key
+BREVO_SENDER_EMAIL=Brevo 已验证的发件地址
+BREVO_SENDER_NAME=CareerPilot AI
+```
+
+`EMAIL_DELIVERY_PROVIDER=auto` 时，系统在 Brevo Key 和发件地址都存在时优先使用 HTTPS，否则回退到 QQ SMTP；`brevo` 会强制使用 HTTPS；`smtp` 会强制使用原 QQ SMTP。Brevo 请求失败时接口返回 503，并立即作废本次验证码，不会伪造发送成功。
+
+配置后必须分别从注册、验证码登录和找回密码页面向真实 QQ 邮箱发送一次验证码，确认收件箱、垃圾邮件目录、五分钟有效期和单次消费均正常。
+
+## QQ SMTP 配置（本地回退）
 
 普通注册用户只输入自己的 QQ 邮箱作为验证码接收地址，不需要提供 QQ 密码或 SMTP 授权码。所有验证码由系统配置的一个 QQ 发信邮箱统一发送。
 
@@ -27,7 +46,7 @@ SMTP_SENDER_NAME=CareerPilot AI
 SMTP_USE_SSL=true
 ```
 
-未配置 SMTP 时，密码登录和本机管理员登录仍可使用；注册、验证码登录和找回密码会明确返回“QQ 邮箱发信服务尚未配置”，不会伪造发送成功。
+未配置 Brevo 或 SMTP 时，密码登录和本机管理员登录仍可使用；注册、验证码登录和找回密码会明确返回发信服务尚未配置，不会伪造发送成功。
 
 配置完成后先验证 SMTP 登录；提供收件地址时会额外发送一封不含登录验证码的测试邮件：
 

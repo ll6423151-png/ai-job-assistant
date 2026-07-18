@@ -49,6 +49,14 @@ services:
         value: "5"
       - key: APPLICATION_AUTOMATION_COOLDOWN_SECONDS
         value: "60"
+      - key: EMAIL_DELIVERY_PROVIDER
+        value: auto
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: CareerPilot AI
 
   - type: web
     name: careerpilot-web-33387

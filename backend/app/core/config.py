@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     bootstrap_admin_enabled: bool = True
     bootstrap_admin_username: str = "admin"
     bootstrap_admin_password: str = "admin123"
+    email_delivery_provider: str = "auto"
+    brevo_api_key: str = ""
+    brevo_sender_email: str = ""
+    brevo_sender_name: str = "CareerPilot AI"
     smtp_host: str = "smtp.qq.com"
     smtp_port: int = 465
     smtp_username: str = ""

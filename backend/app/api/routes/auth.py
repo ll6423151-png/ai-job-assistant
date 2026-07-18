@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +32,7 @@ async def send_email_code(payload: EmailCodeRequest, request: Request, db: Async
         raise HTTPException(status_code=404, detail='该 QQ 邮箱尚未注册')
     code = await issue_email_code(db, payload.email, payload.purpose, request.client.host if request.client else '')
     try:
-        send_verification_email(payload.email, code, payload.purpose)
+        await asyncio.to_thread(send_verification_email, payload.email, code, payload.purpose)
     except EmailDeliveryUnavailable as exc:
         await discard_unsent_code(db, payload.email, payload.purpose, code)
         raise HTTPException(status_code=503, detail=str(exc)) from exc
