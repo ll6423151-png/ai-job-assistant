@@ -50,7 +50,7 @@ services:
       - key: APPLICATION_AUTOMATION_COOLDOWN_SECONDS
         value: "60"
       - key: EMAIL_DELIVERY_PROVIDER
-        value: auto
+        value: relay
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_SENDER_EMAIL

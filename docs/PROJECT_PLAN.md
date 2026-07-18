@@ -986,6 +986,6 @@ OpenAPI 由 FastAPI 自动生成，主要接口如下：
 
 - 本次完成内容：针对 Brevo 登录不可用的情况，增加零费用本机邮件中继。Render 使用 HTTPS 和随机 Bearer Token 把 QQ 收件地址、六位验证码和用途发送到本机 FastAPI；本机验证密钥与请求结构后调用已有 QQ SMTP。授权码始终保留在 `.env.online`，不上传 Render。中继只允许 QQ 邮箱和注册、登录、重置密码三种用途，未配置密钥时返回 404、错误密钥返回 401。
 - 验证结果：新增测试覆盖 HTTPS 中继客户端、安全配置、错误密钥拒绝和本机 SMTP 调用，中继专项 `7 passed`；后端完整回归 `53 passed`，五个相关 PowerShell 脚本均通过语法解析。本机 QQ SMTP 登录复验成功；独立后端 Quick Tunnel 已运行，公网错误密钥返回 401，正确密钥返回 204 并由 QQ SMTP 接受测试邮件。
-- 未完成内容：尚未把邮件中继 Quick Tunnel URL 与随机中继密钥写入 Render Secret，尚未从 Render 注册、验证码登录和找回密码接口完成三类真实 QQ 收件。
-- 后续任务：提交部署中继代码，在 Render 配置中继 URL 与密钥并重新部署，随后完成三类真实 QQ 验证码流程。
+- 未完成内容：邮件中继 Quick Tunnel URL 与随机中继密钥已写入 Render Secret，但 Blueprint 的静态 `EMAIL_DELIVERY_PROVIDER=auto` 覆盖了控制台修改，生产验证码请求仍按未配置 SMTP 返回 503；尚未完成三类真实 QQ 收件。
+- 后续任务：将 Blueprint 的生产邮件提供者固定为 `relay` 并重新部署，随后完成三类真实 QQ 验证码流程。
 - 是否需要人工操作：本机和 Render 配置可自动完成；真实收件需要用户查看 QQ 邮箱。该低成本模式要求电脑与 Tunnel 长期开机，Quick Tunnel 地址变化后需要重新同步。
